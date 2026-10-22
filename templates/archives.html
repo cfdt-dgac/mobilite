@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CFDT Mobilité — Archives</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  .arch-table { width:100%; border-collapse:collapse; font-size:14px; background:#fff; }
+  .arch-table th, .arch-table td { padding:10px 12px; border-bottom:1px solid #eee; text-align:left; vertical-align:middle; }
+  .arch-table th { background:#fafafa; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
+  .arch-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .arch-actions a { margin-right:12px; white-space:nowrap; }
+  .hist-cta { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-brand">🔵 CFDT Aviation Civile — Archives des campagnes</div>
+  <a href="/" class="btn-ghost">← Tableau de bord</a>
+</header>
+
+<main style="max-width:980px;margin:32px auto;padding:0 20px">
+
+  {% if msg %}<div class="msg msg-ok" style="margin-bottom:16px">✔ {{ msg }}</div>{% endif %}
+  {% if err %}<div class="msg msg-err" style="margin-bottom:16px;background:#fdecea;color:#8a1c12;padding:10px 14px;border-radius:8px">✘ {{ err }}</div>{% endif %}
+
+  <div class="settings-card hist-cta">
+    <div>
+      <h2 style="margin:0 0 4px">Historique des postes non pourvus</h2>
+      <p class="small" style="margin:0">Tous les postes restés vacants dans les campagnes archivées, et ceux qui reviennent d'une campagne à l'autre.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/historique" class="btn-primary">Voir l'historique</a>
+      <a href="/historique.xlsx" class="btn-secondary">⬇ Excel</a>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h2>Campagnes archivées ({{ archives|length }})</h2>
+    {% if archives %}
+    <table class="arch-table">
+      <thead><tr><th>Campagne</th><th>Date</th><th class="num">Postes</th><th class="num">Retenus</th><th class="num">Non pourvus</th><th></th></tr></thead>
+      <tbody>
+      {% for a in archives %}
+        <tr>
+          <td><strong>{{ a.campaign }}</strong>{% if not a.has_results %}<br><span class="small">sans résultats CDM</span>{% endif %}</td>
+          <td>{{ a.date_campagne }}</td>
+          <td class="num">{{ a.postes }}</td>
+          <td class="num">{{ a.retenus if a.has_results else '—' }}</td>
+          <td class="num">{{ a.vacants if a.vacants is not none else '—' }}</td>
+          <td class="arch-actions">
+            {% if a.has_site %}<a href="/archives/{{ a.slug }}/site/index.html" target="_blank">🌐 Ouvrir le site</a>{% endif %}
+            {% if a.has_results %}<a href="/archives/{{ a.slug }}/site/resultats.html" target="_blank">✅ Résultats</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="small">Les archives sont dans <code>{{ data_dir }}\archives</code>. Chacune contient le site, les PDF, les rapports et un fichier <code>postes_non_pourvus.xlsx</code>.</p>
+    {% else %}
+    <p class="small">Aucune campagne archivée pour l'instant.</p>
+    {% endif %}
+  </div>
+
+  <div class="settings-card">
+    <h2>Archiver la campagne en cours</h2>
+    {% if state.campaign %}
+    <p class="small">Campagne en cours : <strong>{{ state.campaign }}</strong>
+      {% if state.archived %} — ✔ déjà archivée (vous pouvez réarchiver pour mettre à jour){% else %} — pas encore archivée{% endif %}.
+      {% if not state.step3_done %}<br>⚠ Les résultats CDM ne sont pas encore importés : l'archive ne comptera pas dans l'historique des postes non pourvus.{% endif %}
+    </p>
+    <form method="POST" action="/archiver"><button type="submit" class="btn-primary">🗂 Archiver maintenant</button></form>
+    {% else %}
+    <p class="small">Aucune campagne en cours.</p>
+    {% endif %}
+  </div>
+
+  <div class="settings-card">
+    <h2>Importer une ancienne campagne</h2>
+    <p class="small">Pour une campagne sauvegardée avant l'archivage automatique : indiquez le dossier qui contient son <code>state.json</code>
+      (ex. <code>C:\Users\aymer\dev\mobilite_site\Site CDM printemps 2026\data</code>).</p>
+    <form method="POST" action="/archives/importer" style="display:flex;gap:10px;flex-wrap:wrap">
+      <input type="text" name="src" placeholder="Chemin du dossier data de l'ancienne campagne" style="flex:1;min-width:320px">
+      <button type="submit" class="btn-secondary">Importer</button>
+    </form>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CFDT Mobilité — Paramètres</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-brand">🔵 CFDT Aviation Civile — Paramètres</div>
+  <a href="/" class="btn-ghost">← Tableau de bord</a>
+</header>
+
+<main style="max-width:680px;margin:32px auto;padding:0 20px">
+
+  {% if msg %}
+  <div class="msg msg-ok" style="margin-bottom:16px">✔ {{ msg }}</div>
+  {% endif %}
+  {% if err %}
+  <div class="msg msg-err" style="margin-bottom:16px">✘ {{ err }}</div>
+  {% endif %}
+  {% if legacy_token %}
+  <div class="msg msg-err" style="margin-bottom:16px">
+    ⚠ Le token Netlify est encore enregistré <strong>en clair</strong> dans config.json.
+    Ressaisissez-le ci-dessous avec un mot de passe de publication pour le chiffrer,
+    avant de partager le dossier de l'appli.
+  </div>
+  {% endif %}
+
+  <form method="POST">
+
+    <div class="settings-card">
+      <h2>Netlify</h2>
+      <p class="small">
+        Créez un compte sur <a href="https://www.netlify.com" target="_blank">netlify.com</a>,
+        puis récupérez un token dans
+        <strong>User settings → Applications → Personal access tokens</strong>.
+      </p>
+
+      <p class="small">
+        Le token est enregistré <strong>chiffré</strong> (fichier <code>publication.enc</code>)
+        avec un <strong>mot de passe de publication</strong>, demandé à chaque mise en ligne.
+        Ce mot de passe n'est enregistré nulle part : transmettez-le de vive voix
+        aux personnes autorisées à publier.
+      </p>
+      <p class="small">
+        {% if token_saved %}✔ Un token chiffré est enregistré. Laissez les champs ci-dessous
+        vides pour le conserver, ou saisissez un nouveau token et un mot de passe pour le remplacer.
+        {% else %}Aucun token chiffré enregistré.{% endif %}
+      </p>
+
+      <label class="field-label">Token personnel Netlify
+        <input type="password" name="netlify_token" value="" autocomplete="off"
+               placeholder="{% if token_saved %}•••• (inchangé){% else %}nfp_xxxxxxxxxxxx{% endif %}"
+               style="width:100%">
+      </label>
+      <button type="button" id="btn-check" class="btn-secondary" style="margin-top:6px">
+        Vérifier le token
+      </button>
+      <span id="token-status" class="small" style="margin-left:10px"></span>
+
+      <label class="field-label" style="margin-top:16px">Mot de passe de publication (8 caractères minimum)
+        <input type="password" name="publish_password" value="" autocomplete="new-password" style="width:100%">
+      </label>
+      <label class="field-label">Confirmer le mot de passe
+        <input type="password" name="publish_password2" value="" autocomplete="new-password" style="width:100%">
+      </label>
+
+      <label class="field-label" style="margin-top:16px">Site Netlify cible
+        <select name="netlify_site_id" id="sel-site" style="width:100%">
+          <option value="">— choisir un site —</option>
+          {% if config.netlify_site_id and not (sites | selectattr("id", "equalto", config.netlify_site_id) | list) %}
+          <option value="{{ config.netlify_site_id }}" selected>Site actuel ({{ config.netlify_site_id }})</option>
+          {% endif %}
+          {% for s in sites %}
+          <option value="{{ s.id }}"
+            {% if s.id == config.netlify_site_id %}selected{% endif %}>
+            {{ s.name }} ({{ s.id }})
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <p class="small">
+        Pour changer de site, saisissez le token puis cliquez sur « Vérifier le token ».
+      </p>
+    </div>
+
+    <div class="settings-card">
+      <h2>Dossier des données de campagne</h2>
+      <p class="small">
+        Laissez vide pour utiliser le dossier <code>data</code> placé à côté de l'appli
+        (recommandé quand l'appli est elle-même dans le dossier OneDrive partagé).
+        Sinon, indiquez un chemin ; <code>%USERPROFILE%</code> est accepté
+        (ex. <code>%USERPROFILE%\OneDrive - DGAC\Mobilite\data</code>).
+        Ces réglages sont communs à tous les utilisateurs de l'appli.
+      </p>
+      <label class="field-label">Chemin du dossier
+        <input type="text" name="data_dir" value="{{ config.data_dir or '' }}"
+               placeholder="vide = dossier data de l'appli" style="width:100%">
+      </label>
+      <p class="small">Dossier utilisé actuellement : <code>{{ data_dir }}</code></p>
+    </div>
+
+    <div class="settings-card">
+      <h2>Scraping CSP</h2>
+      <p class="small">
+        Identifiants des organismes sur choisirleservicepublic.gouv.fr,
+        séparés par des virgules.<br>
+        <strong>417</strong> = DGAC &nbsp;·&nbsp; <strong>417-390</strong> = Météo-France
+      </p>
+      <label class="field-label">Organismes
+        <input type="text" name="organismes" value="{{ config.organismes }}"
+               placeholder="417,417-390" style="width:100%">
+      </label>
+    </div>
+
+    <button type="submit" class="btn-primary" style="margin-top:8px">
+      Enregistrer
+    </button>
+
+  </form>
+</main>
+
+<script>
+document.getElementById('btn-check').addEventListener('click', async () => {
+  const token = document.querySelector('[name=netlify_token]').value.trim();
+  const el    = document.getElementById('token-status');
+  const sel   = document.getElementById('sel-site');
+  const cur   = sel.value;
+  if (!token) { el.textContent = 'Entrez un token.'; return; }
+  el.textContent = '⏳ Vérification…';
+  const d = await (await fetch('/check-token?token=' + encodeURIComponent(token))).json();
+  if (d.ok) {
+    el.textContent = '✔ Token valide';
+    el.style.color = 'green';
+    // Mise à jour de la liste de sites
+    sel.innerHTML = '<option value="">— choisir un site —</option>';
+    d.sites.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = `${s.name} (${s.id})`;
+      if (s.id === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+  } else {
+    el.textContent = '✘ Token invalide';
+    el.style.color = 'red';
+  }
+});
+</script>
+
+</body>
+</html>

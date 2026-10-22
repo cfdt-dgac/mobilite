@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CFDT Mobilité — Infos campagne</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  textarea { width:100%; font-family:ui-monospace,Consolas,monospace; font-size:12.5px; line-height:1.5; padding:8px; border:1px solid #ddd; border-radius:8px; }
+  .field-label input[type=text] { width:100%; }
+  .warn { background:#fff4e5; border-left:4px solid #E7591C; padding:8px 12px; border-radius:6px; font-size:13px; margin-top:6px; }
+  .radio-row { display:flex; gap:18px; margin:6px 0 4px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-brand">🔵 CFDT Aviation Civile — Infos de la campagne</div>
+  <a href="/" class="btn-ghost">← Tableau de bord</a>
+</header>
+
+<main style="max-width:760px;margin:32px auto;padding:0 20px">
+
+  {% if msg %}
+  <div class="msg msg-ok" style="margin-bottom:16px">✔ {{ msg }}</div>
+  {% endif %}
+
+  <p class="small">Ces informations alimentent la page <strong>Informations pratiques</strong> du site
+  {% if state.campaign %}pour la campagne <strong>{{ state.campaign }}</strong>{% endif %}.
+  Elles sont enregistrées dans <code>data/campaign_info.json</code> et donc sauvegardées avec le dossier <code>data/</code>.</p>
+
+  <form method="POST">
+
+    <div class="settings-card">
+      <h2>État et échéances</h2>
+      <div class="radio-row">
+        <label><input type="radio" name="statut" value="ouverte" {% if info.statut == 'ouverte' %}checked{% endif %}> Campagne ouverte</label>
+        <label><input type="radio" name="statut" value="close" {% if info.statut == 'close' %}checked{% endif %}> Campagne close</label>
+      </div>
+      <label class="field-label">Date limite de candidature (et de modification / annulation)
+        <input type="text" name="date_limite" value="{{ info.date_limite }}" placeholder="ex. lundi 31 août 2026">
+      </label>
+      <label class="field-label">Date limite des avis des services dans le SIRH
+        <input type="text" name="date_avis" value="{{ info.date_avis }}" placeholder="ex. lundi 7 septembre 2026">
+      </label>
+      <label class="field-label">Publication des résultats
+        <input type="text" name="date_resultats" value="{{ info.date_resultats }}" placeholder="ex. semaine 38 (du 14 au 18 septembre 2026)">
+      </label>
+      <label class="field-label">Message d'information (facultatif, affiché en encadré)
+        <textarea name="message" rows="3" placeholder="ex. Attention : la date limite a été repoussée au…">{{ info.message }}</textarea>
+      </label>
+    </div>
+
+    <div class="settings-card">
+      <h2>Contacts pour les candidatures par mail</h2>
+      <p class="small">Une ligne par contact, au format <code>Corps | Nom | email</code>.
+      Plusieurs contacts pour un même corps : mettez plusieurs lignes avec le même corps.</p>
+      <textarea name="contacts" rows="12">{{ info.contacts }}</textarea>
+      {% if bad_contacts %}
+      <div class="warn">⚠ Lignes ignorées (format incorrect) :<br>{% for l in bad_contacts %}<code>{{ l }}</code><br>{% endfor %}</div>
+      {% endif %}
+    </div>
+
+    <div class="settings-card">
+      <h2>Notes de gestion</h2>
+      <p class="small">Une ligne par document, au format <code>Libellé | https://adresse-du-document</code>.</p>
+      <textarea name="notes" rows="7">{{ info.notes }}</textarea>
+      {% if bad_notes %}
+      <div class="warn">⚠ Lignes ignorées (format incorrect) :<br>{% for l in bad_notes %}<code>{{ l }}</code><br>{% endfor %}</div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn-primary" style="margin-top:8px">Enregistrer</button>
+  </form>
+</main>
+</body>
+</html>

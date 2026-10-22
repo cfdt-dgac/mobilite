@@ -1,0 +1,132 @@
+
+/* CFDT Aviation Civile – Thème Pro (proche cfdt.fr)
+   Couleur principale: #E7591C
+   Remplacer site/assets/styles.css par ce fichier.
+*/
+
+:root{
+  --cfdt:#E7591C;
+  --cfdt-dark:#cc4711;
+  --ink:#222222;
+  --muted:#6A6A6A;
+  --bg:#FFFFFF;
+  --card:#FFFFFF;
+  --line:#E9E9E9;
+  --focus:#0A84FF;
+  --radius:16px;
+  --shadow:0 2px 14px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:400 16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+
+a{color:var(--cfdt);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus,button:focus,input:focus,select:focus,textarea:focus{outline:3px solid var(--focus);outline-offset:2px}
+
+.header{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; padding:14px 24px;
+  background:var(--cfdt); color:#fff;
+  box-shadow:0 1px 0 rgba(0,0,0,.06);
+}
+.brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px}
+.brand .dot{display:inline-block;width:28px;height:28px;border-radius:50%;background:#fff}
+.nav{display:flex; gap:18px; font-weight:600}
+.nav a{color:#fff; opacity:.95}
+.nav a:hover{opacity:1}
+
+.container{max-width:1180px;margin:0 auto;padding:22px 22px}
+h1{font-weight:800;font-size:30px;line-height:1.2;margin:4px 0 14px}
+h2{font-weight:800;font-size:22px;margin:18px 0 10px}
+h3{font-weight:700;font-size:18px;margin:12px 0 8px}
+.small{font-size:13px;color:var(--muted)}
+
+.banner{
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+  padding:10px 14px; background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); margin:10px 0 18px;
+}
+.banner .pill{background:rgba(231,89,28,.08); color:var(--cfdt); border:1px solid rgba(231,89,28,.25);
+  padding:6px 10px; border-radius:999px; font-weight:700; font-size:13px}
+
+.controls{display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 16px}
+.controls input,.controls select{
+  padding:10px 12px; min-width:200px;
+  border:1px solid var(--line); border-radius:12px; background:#fff;
+  transition:border .15s ease, box-shadow .15s ease;
+}
+.controls input:focus,.controls select:focus{border-color:var(--cfdt); box-shadow:0 0 0 3px rgba(231,89,28,.15)}
+
+.btn, .button{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 14px; border-radius:999px; border:1px solid var(--cfdt); color:#fff;
+  background:var(--cfdt); font-weight:700; text-decoration:none; cursor:pointer;
+  transition:transform .04s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+.btn.secondary{background:#fff;color:var(--cfdt);border-color:var(--cfdt)}
+.btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:#fff; color:var(--ink); border-color:var(--line)}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:16px; transition:box-shadow .2s ease, transform .04s ease;
+}
+.card:hover{box-shadow:var(--shadow-lg); transform:translateY(-1px)}
+.card .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px}
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:999px; background:rgba(231,89,28,.08); border:1px solid rgba(231,89,28,.25);
+  color:var(--cfdt); font-weight:800; font-size:12px; letter-spacing:.2px;
+}
+.tag{display:inline-block;margin:6px 6px 0 0; padding:4px 8px; font-size:12px; background:#F5F5F5; border-radius:999px;border:1px solid var(--line)}
+
+footer{padding:28px; text-align:center; color:var(--muted); border-top:1px solid var(--line); margin-top:24px}
+
+/* Modal */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:24px}
+.modal.open{display:flex}
+.panel{
+  background:#fff; color:var(--ink);
+  width:min(920px, 100%); max-height:92vh; overflow:auto;
+  border-radius:20px; border:1px solid var(--line); box-shadow:var(--shadow-lg);
+  padding:20px 24px;
+}
+.panel h3{margin:4px 0 8px; font-size:22px}
+.panel .submeta{color:var(--muted); font-size:14px; margin-bottom:10px}
+.panel hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.panel pre{white-space:pre-wrap; font-family:inherit; font-size:15px; line-height:1.55}
+.close{float:right; cursor:pointer; font-weight:800; color:var(--muted)}
+.close:hover{color:var(--ink)}
+
+/* Helpers */
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.center{text-align:center}
+.hidden{display:none}
+
+/* Responsive */
+@media (max-width:720px){
+  .header{padding:12px 16px}
+  .container{padding:16px}
+  .grid{grid-template-columns:1fr}
+  .controls input,.controls select{min-width:unset; width:100%}
+  .panel{padding:16px}
+}
+
+/* Print (cartes lisibles) */
+@media print{
+  .header, .controls, .btn, .modal{display:none!important}
+  .card{break-inside:avoid}
+}

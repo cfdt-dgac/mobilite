@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CFDT Mobilité — Historique des postes non pourvus</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  .tabs { display:flex; gap:4px; border-bottom:2px solid #eee; margin:8px 0 14px; }
+  .tabs button { background:none; border:0; padding:10px 16px; font-weight:600; color:#666; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-size:14px; }
+  .tabs button.on { color:#E7591C; border-bottom-color:#E7591C; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .filters input, .filters select { padding:8px 10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .filters input { flex:1; min-width:240px; }
+  table.h { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+  table.h th, table.h td { padding:7px 10px; border-bottom:1px solid #eee; text-align:left; vertical-align:top; }
+  table.h th { background:#fafafa; position:sticky; top:0; font-size:12px; color:#555; }
+  .nb { display:inline-block; min-width:26px; text-align:center; padding:2px 8px; border-radius:999px; font-weight:700; font-size:12px; background:#f1f1f1; }
+  .nb.multi { background:#E7591C; color:#fff; }
+  .kpis { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .kpi { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px 18px; }
+  .kpi b { display:block; font-size:24px; }
+  .kpi span { font-size:12px; color:#666; }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="app-brand">🔵 CFDT Aviation Civile — Historique des postes non pourvus</div>
+  <div style="display:flex;gap:8px"><a href="/historique.xlsx" class="btn-ghost">⬇ Excel</a><a href="/archives" class="btn-ghost">← Archives</a></div>
+</header>
+
+<main style="max-width:1280px;margin:24px auto;padding:0 20px">
+  {% if not detail %}
+  <div class="settings-card"><p>Aucune campagne archivée avec résultats CDM. Archivez une campagne depuis la page <a href="/archives">Archives</a>.</p></div>
+  {% else %}
+  <div class="kpis">
+    <div class="kpi"><b>{{ campagnes|length }}</b><span>campagnes archivées avec résultats</span></div>
+    <div class="kpi"><b>{{ detail|length }}</b><span>postes non pourvus au total</span></div>
+    <div class="kpi"><b>{{ n_multi }}</b><span>postes non pourvus dans plusieurs campagnes</span></div>
+  </div>
+  <p class="small">Un même poste est reconnu d'une campagne à l'autre par son intitulé, son service et sa commune (le N° AVE change à chaque campagne). Les postes fermés par additif ne sont pas comptés.</p>
+
+  <div class="tabs">
+    <button class="on" data-tab="rec">Postes récurrents</button>
+    <button data-tab="det">Détail par campagne</button>
+  </div>
+
+  <div class="filters">
+    <input id="q" type="search" placeholder="Rechercher un poste, un service, une commune, un N° AVE…">
+    <select id="gs"><option value="">Tous les grands services</option></select>
+    <select id="camp"><option value="">Toutes les campagnes</option>{% for c in campagnes %}<option>{{ c }}</option>{% endfor %}</select>
+    <label class="small" id="multi-wrap" style="display:flex;flex-direction:row;align-items:center;gap:6px;margin:0;white-space:nowrap"><input type="checkbox" id="multi" style="width:auto;margin:0;flex:none"> Seulement ceux non pourvus plusieurs fois</label>
+  </div>
+  <p class="small" id="count"></p>
+
+  <div id="tab-rec">
+    <table class="h"><thead><tr><th>Non pourvu</th><th>Poste</th><th>Grand service</th><th>Service</th><th>Commune</th><th>Campagnes</th><th>Dernier N° AVE</th></tr></thead>
+    <tbody>
+    {% for r in rec %}
+      <tr data-gs="{{ r['Grand service'] }}" data-camps="{{ r['Campagnes'] }}" data-nb="{{ r['Nb campagnes'] }}">
+        <td><span class="nb {% if r['Nb campagnes'] > 1 %}multi{% endif %}">{{ r['Nb campagnes'] }}×</span></td>
+        <td><strong>{{ r['Poste'] }}</strong></td><td>{{ r['Grand service'] }}</td><td>{{ r['Service'] }}</td>
+        <td>{{ r['Commune'] }}</td><td class="small">{{ r['Campagnes'] }}</td><td>{{ r['Dernier N° AVE'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody></table>
+  </div>
+
+  <div id="tab-det" hidden>
+    <table class="h"><thead><tr><th>Campagne</th><th>N° AVE</th><th>Grand service</th><th>Service</th><th>Commune</th><th>Libellé du poste</th><th>Corps</th><th>1ère CDM d'ouverture</th></tr></thead>
+    <tbody>
+    {% for r in detail %}
+      <tr data-gs="{{ r['Grand service'] }}" data-camps="{{ r['Campagne'] }}" data-nb="1">
+        <td>{{ r['Campagne'] }}</td><td>{{ r['N° AVE'] }}</td><td>{{ r['Grand service'] }}</td><td>{{ r['Service'] }}</td>
+        <td>{{ r['Commune'] }}</td><td>{{ r['Libellé du poste'] }}</td><td class="small">{{ r['Corps et restriction'] }}</td>
+        <td class="small">{{ r["Première CDM d'ouverture du poste"] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody></table>
+  </div>
+  {% endif %}
+</main>
+
+<script>
+(function(){
+  const q=document.getElementById('q'); if(!q) return;
+  const gs=document.getElementById('gs'), camp=document.getElementById('camp'), multi=document.getElementById('multi'), cnt=document.getElementById('count');
+  let tab='rec';
+  const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const rows=t=>[...document.querySelectorAll('#tab-'+t+' tbody tr')];
+  [...new Set(rows('rec').map(r=>r.dataset.gs).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.textContent=v;gs.appendChild(o);});
+  function apply(){
+    const qq=norm(q.value); let n=0;
+    rows(tab).forEach(r=>{
+      const ok=(!qq||norm(r.textContent).includes(qq))&&(!gs.value||r.dataset.gs===gs.value)
+        &&(!camp.value||r.dataset.camps.split(' · ').includes(camp.value))
+        &&(tab!=='rec'||!multi.checked||Number(r.dataset.nb)>1);
+      r.hidden=!ok; if(ok)n++;
+    });
+    cnt.textContent=n+(tab==='rec'?' poste(s)':' ligne(s)');
+  }
+  document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+    tab=b.dataset.tab; document.getElementById('tab-rec').hidden=tab!=='rec'; document.getElementById('tab-det').hidden=tab!=='det';
+    document.getElementById('multi-wrap').style.display=tab==='rec'?'flex':'none'; apply();
+  }));
+  [q,gs,camp,multi].forEach(el=>el.addEventListener('input',apply));
+  apply();
+})();
+</script>
+</body>
+</html>

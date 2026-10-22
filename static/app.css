@@ -1,0 +1,155 @@
+:root {
+  --cfdt: #E7591C;
+  --cfdt-dk: #c94a14;
+  --ink: #222;
+  --muted: #666;
+  --bg: #f4f5f7;
+  --card: #fff;
+  --line: #e0e0e0;
+  --green: #1a9e4a;
+  --radius: 14px;
+  --shadow: 0 2px 12px rgba(0,0,0,.07);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 15px/1.55 system-ui, -apple-system, sans-serif; }
+
+/* ── Header ─────────────────────────────────────────────────── */
+.app-header {
+  background: var(--cfdt); color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.app-brand { font-weight: 800; font-size: 17px; }
+.btn-ghost {
+  color: #fff; text-decoration: none; font-weight: 600;
+  border: 1px solid rgba(255,255,255,.5); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px;
+  transition: background .15s;
+}
+.btn-ghost:hover { background: rgba(255,255,255,.15); }
+
+/* ── Campaign bar ────────────────────────────────────────────── */
+.campaign-bar {
+  background: #fff3ee; border-bottom: 1px solid rgba(231,89,28,.2);
+  padding: 8px 28px; font-size: 13px; color: var(--cfdt);
+}
+.link-btn {
+  background: none; border: none; color: var(--cfdt);
+  text-decoration: underline; cursor: pointer; font-size: 13px; padding: 0;
+}
+
+/* ── Dashboard layout ────────────────────────────────────────── */
+.dashboard {
+  max-width: 860px; margin: 28px auto; padding: 0 20px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── Step cards ──────────────────────────────────────────────── */
+.step-card {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); border: 2px solid transparent;
+  display: flex; gap: 0; overflow: hidden;
+  transition: border-color .2s;
+}
+.step-card.done   { border-color: var(--green); }
+.step-card.locked { opacity: .55; pointer-events: none; }
+
+.step-num {
+  min-width: 56px; background: var(--cfdt); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 900;
+}
+.step-card.done .step-num { background: var(--green); }
+.step-card.locked .step-num { background: #aaa; }
+
+.step-body { padding: 20px 24px; flex: 1; }
+.step-body h2 { margin: 0 0 4px; font-size: 18px; }
+.step-desc { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+
+.badge-ok {
+  display: inline-block; background: #e6f7ed; color: var(--green);
+  border: 1px solid #a3dbb8; border-radius: 999px;
+  padding: 4px 12px; font-size: 13px; font-weight: 700;
+  margin-bottom: 14px;
+}
+.locked-msg { color: var(--muted); font-size: 13px; font-style: italic; }
+
+/* ── Forms ───────────────────────────────────────────────────── */
+.field-row { margin-bottom: 12px; }
+label { display: flex; flex-direction: column; gap: 4px;
+  font-size: 13px; font-weight: 600; color: var(--muted); }
+input[type=text], input[type=file], select {
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+  font-size: 14px; background: #fafafa; width: 100%; max-width: 420px;
+  transition: border-color .15s;
+}
+input[type=text]:focus, select:focus { border-color: var(--cfdt); outline: none; }
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn-primary {
+  background: var(--cfdt); color: #fff; border: none;
+  padding: 10px 20px; border-radius: 999px; font-weight: 700;
+  cursor: pointer; font-size: 14px; transition: background .15s;
+}
+.btn-primary:hover { background: var(--cfdt-dk); }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+.btn-secondary {
+  background: #fff; color: var(--cfdt); border: 1.5px solid var(--cfdt);
+  padding: 9px 18px; border-radius: 999px; font-weight: 700;
+  cursor: pointer; font-size: 14px; transition: background .15s;
+}
+.btn-secondary:hover { background: #fff3ee; }
+
+/* ── Messages ────────────────────────────────────────────────── */
+.msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+.msg-ok  { color: var(--green); }
+.msg-err { color: #d32f2f; }
+
+/* ── Progress bar ────────────────────────────────────────────── */
+.progress-box { margin-top: 12px; }
+.progress-bar {
+  height: 8px; background: var(--line); border-radius: 999px; overflow: hidden;
+  margin-bottom: 6px;
+}
+#progress-fill {
+  height: 100%; width: 0; background: var(--cfdt);
+  transition: width .4s ease; border-radius: 999px;
+}
+
+/* ── Action grid (step 4) ────────────────────────────────────── */
+.action-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+.action-box {
+  flex: 1; min-width: 240px; background: #fafafa;
+  border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+}
+.action-box h3 { margin: 0 0 6px; font-size: 15px; }
+
+/* ── Reports list ────────────────────────────────────────────── */
+.report-link {
+  display: block; padding: 6px 0; color: var(--cfdt);
+  text-decoration: none; font-size: 13px;
+}
+.report-link:hover { text-decoration: underline; }
+
+/* ── Settings ────────────────────────────────────────────────── */
+.settings-card {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 16px;
+}
+.settings-card h2 { margin: 0 0 8px; font-size: 17px; }
+.field-label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .step-num { min-width: 40px; font-size: 20px; }
+  .step-body { padding: 14px 16px; }
+  .action-grid { flex-direction: column; }
+}

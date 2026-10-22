@@ -1,0 +1,14 @@
+# Réglages locaux et token Netlify chiffré — ne jamais publier
+config.json
+publication.enc
+*.enc.tmp
+
+# Données de campagne (PDF, noms des agents, site généré)
+data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Sauvegardes
+*.bak_*

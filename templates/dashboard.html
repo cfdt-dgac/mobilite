@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CFDT Mobilité — Tableau de bord</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-brand">🔵 CFDT Aviation Civile — Gestion de la Mobilité</div>
+  <nav style="display:flex;gap:8px">
+    <a href="/campagne" class="btn-ghost">📅 Infos campagne</a>
+    <a href="/archives" class="btn-ghost">🗂 Archives</a>
+    <a href="/settings" class="btn-ghost">⚙ Paramètres</a>
+  </nav>
+</header>
+
+{% if other %}
+<div class="campaign-bar" style="background:#fdecea;color:#8a1c12;border-bottom:2px solid #c0392b">
+  ⚠ <strong>{{ other.qui }}</strong> travaille sur la campagne (dernière activité : {{ other.depuis }}).
+  Attendez qu'il ou elle ait fini avant d'importer ou de publier, sinon vos travaux risquent de s'écraser.
+  <form method="POST" action="/prendre-la-main" style="display:inline"
+        onsubmit="return confirm('Confirmer que cette personne a terminé et prendre la main ?')">
+    <button type="submit" class="link-btn">Prendre la main</button>
+  </form>
+</div>
+{% endif %}
+{% if shared %}
+<div class="campaign-bar" style="font-size:12px;opacity:.8">📁 Données partagées : <code>{{ data_dir }}</code></div>
+{% endif %}
+{% if state.campaign %}
+<div class="campaign-bar">
+  Campagne en cours : <strong>{{ state.campaign }}</strong>
+  &nbsp;·&nbsp;
+  <form method="POST" action="/archiver" style="display:inline">
+    <button type="submit" class="link-btn">🗂 Archiver la campagne</button>
+  </form>
+  &nbsp;·&nbsp;
+  <form method="POST" action="/reset" style="display:inline"
+        onsubmit="return confirm({% if state.archived %}'Démarrer une nouvelle campagne ? La campagne en cours est archivée.'{% else %}'ATTENTION : la campagne en cours n\'a PAS été archivée. Ses données seront perdues. Continuer quand même ?'{% endif %})">
+    <button type="submit" class="link-btn">Nouvelle campagne</button>
+  </form>
+</div>
+{% endif %}
+
+<main class="dashboard">
+
+  <!-- ── ÉTAPE 1 ── -->
+  <section class="step-card {% if state.step1_done %}done{% endif %}" id="step1">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h2>Importer le PDF AVE</h2>
+      <p class="step-desc">Le tableau des postes ouverts fourni par l'administration (PDF).</p>
+
+      {% if state.step1_done %}
+      <div class="badge-ok">✔ {{ state.ave_count }} postes extraits — {{ state.campaign }}</div>
+      {% endif %}
+
+      <form id="form-ave" enctype="multipart/form-data">
+        <div class="field-row">
+          <label>Nom de la campagne
+            <input type="text" name="campaign" placeholder="ex : Printemps 2026"
+                   value="{{ state.campaign }}" required>
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Fichier PDF AVE
+            <input type="file" name="pdf" accept=".pdf" required>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">
+          {% if state.step1_done %}Réimporter{% else %}Importer{% endif %}
+        </button>
+      </form>
+      <div id="msg-ave" class="msg"></div>
+
+      <!-- Additifs / Modificatifs -->
+      {% if state.step1_done %}
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #f0e8e4">
+        <h3 style="font-size:15px;margin:0 0 4px;color:#444">Tableaux additifs / modificatifs</h3>
+        <p class="step-desc" style="margin-bottom:10px">
+          Correctifs envoyés par l'administration après le tableau initial.
+          Chaque import est cumulatif (n'écrase pas le précédent).
+        </p>
+
+        {% if state.additifs_applied %}
+        <ul style="font-size:13px;color:#555;margin:0 0 10px;padding-left:18px">
+          {% for a in state.additifs_applied %}
+          <li>
+            <strong>{{ a.date }}</strong> — {{ a.filename }}
+            {% if a.fermes %}<span style="color:#d32f2f">· {{ a.fermes }} fermeture(s)</span>{% endif %}
+            {% if a.modifs %}<span style="color:#E7591C">· {{ a.modifs }} modificatif(s)</span>{% endif %}
+            {% if a.ajouts %}<span style="color:#1a9e4a">· {{ a.ajouts }} ajout(s)</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        <form id="form-additif" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <label style="font-size:13px;font-weight:600;color:#666;display:flex;flex-direction:column;gap:4px">
+            PDF additif / modificatif
+            <input type="file" name="pdf" accept=".pdf" required>
+          </label>
+          <button type="submit" class="btn-secondary" style="white-space:nowrap">
+            + Appliquer l'additif
+          </button>
+        </form>
+        <div id="msg-additif" class="msg"></div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ── ÉTAPE 2 ── -->
+  <section class="step-card {% if state.step2_done %}done{% elif not state.step1_done %}locked{% endif %}"
+           id="step2">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h2>Récupérer les offres CSP</h2>
+      <p class="step-desc">
+        Scraping automatique de <code>choisirleservicepublic.gouv.fr</code>
+        (DGAC + Météo-France). Durée estimée : 10–15 min.
+      </p>
+
+      {% if state.step2_done %}
+      <div class="badge-ok">✔ {{ state.csp_count }} offres récupérées</div>
+      {% endif %}
+
+      {% if not state.step1_done %}
+      <p class="locked-msg">⟵ Complétez l'étape 1 d'abord</p>
+      {% else %}
+      <form id="form-csp">
+        <button type="submit" class="btn-primary" id="btn-scrape">
+          {% if state.step2_done %}Mettre à jour les offres CSP{% else %}Lancer le scraping{% endif %}
+        </button>
+      </form>
+      <div id="scrape-progress" class="progress-box" style="display:none">
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <p id="scrape-msg" class="small">—</p>
+      </div>
+      <div id="msg-csp" class="msg"></div>
+
+      <!-- Import SIRH JSON (optionnel) -->
+      {% if state.step1_done %}
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #f0e8e4">
+        <h3 style="font-size:15px;margin:0 0 4px;color:#444">
+          Import données SIRH <span style="font-weight:400;color:#888">(optionnel)</span>
+        </h3>
+        <p class="step-desc" style="margin-bottom:10px">
+          Si vous avez utilisé le scraper console sur le portail SIRH, importez ici le fichier
+          <code>offres_sirh.json</code> pour enrichir les données du tableau.
+        </p>
+        {% if state.sirh_done %}
+        <div class="badge-ok" style="margin-bottom:10px">✔ {{ state.sirh_count }} offres SIRH importées</div>
+        {% endif %}
+        <form id="form-sirh" enctype="multipart/form-data"
+              style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <label style="font-size:13px;font-weight:600;color:#666;display:flex;flex-direction:column;gap:4px">
+            Fichier offres_sirh.json
+            <input type="file" name="json" accept=".json" required>
+          </label>
+          <button type="submit" class="btn-secondary" style="white-space:nowrap">
+            + Importer le JSON SIRH
+          </button>
+        </form>
+        <div id="msg-sirh" class="msg"></div>
+      </div>
+      {% endif %}
+
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ── ÉTAPE 3 ── -->
+  <section class="step-card {% if state.step3_done %}done{% elif not state.step1_done %}locked{% endif %}"
+           id="step3">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h2>Importer les résultats CDM</h2>
+      <p class="step-desc">
+        Le communiqué de résultats de la CDM fourni par l'administration (PDF).
+        Contient les agents retenus par poste.
+      </p>
+
+      {% if state.step3_done %}
+      <div class="badge-ok">✔ {{ state.res_count }} agents retenus</div>
+      {% endif %}
+
+      {% if not state.step1_done %}
+      <p class="locked-msg">⟵ Complétez l'étape 1 d'abord</p>
+      {% else %}
+      <form id="form-res" enctype="multipart/form-data">
+        <div class="field-row">
+          <label>Fichier PDF résultats CDM
+            <input type="file" name="pdf" accept=".pdf" required>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">
+          {% if state.step3_done %}Réimporter{% else %}Importer{% endif %}
+        </button>
+      </form>
+      <div id="msg-res" class="msg"></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ── ÉTAPE 4 ── -->
+  <section class="step-card {% if not state.step1_done %}locked{% endif %}" id="step4">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h2>Générer &amp; Publier</h2>
+      <p class="step-desc">Génère le site public et les rapports imprimables.</p>
+
+      {% if not state.step1_done %}
+      <p class="locked-msg">⟵ Complétez l'étape 1 d'abord</p>
+      {% else %}
+
+      <div class="action-grid">
+
+        <div class="action-box">
+          <h3>Site public (Netlify)</h3>
+          <p class="small">Tableau filtrable, fiches détaillées
+            {% if state.step3_done %}, page résultats CDM{% endif %}.</p>
+          <button class="btn-primary" id="btn-gen-site">Générer le site</button>
+          <div id="msg-site" class="msg"></div>
+          {% if state.last_deploy %}
+          <p class="small" style="margin-top:8px">
+            Dernier déploiement :
+            <a href="{{ state.last_deploy }}" target="_blank">{{ state.last_deploy }}</a>
+          </p>
+          {% endif %}
+          <label class="small" style="display:block;margin-top:10px">Mot de passe de publication
+            <input type="password" id="deploy-pwd" autocomplete="off" style="width:100%">
+          </label>
+          <button class="btn-secondary" id="btn-deploy" style="margin-top:8px">
+            ↑ Déployer sur Netlify
+          </button>
+          <div id="msg-deploy" class="msg"></div>
+        </div>
+
+        {% if state.step3_done %}
+        <div class="action-box">
+          <h3>Rapports imprimables</h3>
+          <p class="small">Listes par Grand service, par corps, postes vacants.
+             Ouvrez dans le navigateur → Ctrl+P → Enregistrer en PDF.</p>
+          <button class="btn-primary" id="btn-gen-reports">Générer les rapports</button>
+          <div id="msg-reports" class="msg"></div>
+          <div id="reports-list" style="margin-top:10px"></div>
+        </div>
+        {% endif %}
+
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showMsg(id, ok, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+}
+
+async function postForm(url, formId) {
+  const fd = new FormData(document.getElementById(formId));
+  const r  = await fetch(url, { method: 'POST', body: fd });
+  return r.json();
+}
+
+async function postJson(url) {
+  const r = await fetch(url, { method: 'POST' });
+  return r.json();
+}
+
+// ── Étape 1 ──────────────────────────────────────────────────────────────────
+document.getElementById('form-ave').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showMsg('msg-ave', true, '⏳ Extraction en cours…');
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  const d = await postForm('/upload-ave', 'form-ave');
+  btn.disabled = false;
+  if (d.ok) {
+    showMsg('msg-ave', true, `✔ ${d.count} postes extraits.`);
+    setTimeout(() => location.reload(), 800);
+  } else {
+    showMsg('msg-ave', false, '✘ ' + d.msg);
+  }
+});
+
+// ── Étape 1b : Additif ───────────────────────────────────────────────────────
+const formAdditif = document.getElementById('form-additif');
+if (formAdditif) {
+  formAdditif.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showMsg('msg-additif', true, '⏳ Application du tableau additif…');
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    const d = await postForm('/upload-additif', 'form-additif');
+    btn.disabled = false;
+    if (d.ok) {
+      const parts = [];
+      if (d.fermes)  parts.push(`${d.fermes} fermeture(s)`);
+      if (d.modifs)  parts.push(`${d.modifs} modificatif(s)`);
+      if (d.ajouts)  parts.push(`${d.ajouts} ajout(s)`);
+      const detail = parts.length ? ' — ' + parts.join(', ') : '';
+      showMsg('msg-additif', true, `✔ Additif du ${d.date} appliqué${detail}.`);
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showMsg('msg-additif', false, '✘ ' + d.msg);
+    }
+  });
+}
+
+// ── Étape 2 ──────────────────────────────────────────────────────────────────
+const formCsp = document.getElementById('form-csp');
+if (formCsp) {
+  formCsp.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn  = document.getElementById('btn-scrape');
+    const box  = document.getElementById('scrape-progress');
+    btn.disabled = true;
+    box.style.display = 'block';
+    const fd = new FormData();
+    const d = await postJson('/scrape-start');
+    if (!d.ok) { showMsg('msg-csp', false, d.msg); btn.disabled = false; return; }
+    // Polling
+    const poll = setInterval(async () => {
+      const s = await (await fetch('/scrape-status')).json();
+      const pct = s.total > 0 ? Math.round(s.progress / s.total * 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('scrape-msg').textContent =
+        s.total > 0 ? `${s.progress} / ${s.total} offres — ${s.current}`
+                    : s.current;
+      if (s.error) {
+        clearInterval(poll);
+        showMsg('msg-csp', false, '✘ ' + s.error);
+        btn.disabled = false;
+      }
+      if (s.done) {
+        clearInterval(poll);
+        showMsg('msg-csp', true, `✔ Terminé — ${s.total} offres récupérées.`);
+        setTimeout(() => location.reload(), 1000);
+      }
+    }, 2000);
+  });
+}
+
+// ── Étape 3 ──────────────────────────────────────────────────────────────────
+const formRes = document.getElementById('form-res');
+if (formRes) {
+  formRes.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showMsg('msg-res', true, '⏳ Extraction en cours…');
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    const d = await postForm('/upload-resultats', 'form-res');
+    btn.disabled = false;
+    if (d.ok) {
+      showMsg('msg-res', true, `✔ ${d.retenus} agents retenus, ${d.vacants} postes vacants.`);
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showMsg('msg-res', false, '✘ ' + d.msg);
+    }
+  });
+}
+
+// ── Étape 4 : Générer site ────────────────────────────────────────────────────
+const btnSite = document.getElementById('btn-gen-site');
+if (btnSite) {
+  btnSite.addEventListener('click', async () => {
+    btnSite.disabled = true;
+    showMsg('msg-site', true, '⏳ Génération…');
+    const d = await postJson('/generate-site');
+    btnSite.disabled = false;
+    if (d.ok) showMsg('msg-site', true, `✔ Site généré (${d.files} fichiers).`);
+    else      showMsg('msg-site', false, '✘ ' + d.msg);
+  });
+}
+
+// ── Étape 4 : Déployer ───────────────────────────────────────────────────────
+const btnDeploy = document.getElementById('btn-deploy');
+if (btnDeploy) {
+  btnDeploy.addEventListener('click', async () => {
+    btnDeploy.disabled = true;
+    showMsg('msg-deploy', true, '⏳ Déploiement en cours…');
+    const pwdEl = document.getElementById('deploy-pwd');
+    const r = await fetch('/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwdEl ? pwdEl.value : '' }),
+    });
+    const d = await r.json();
+    if (pwdEl) pwdEl.value = '';
+    btnDeploy.disabled = false;
+    if (d.ok) {
+      showMsg('msg-deploy', true, `✔ En ligne : ${d.url}`);
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      showMsg('msg-deploy', false, '✘ ' + d.msg);
+    }
+  });
+}
+
+// ── Étape 2b : Import SIRH ───────────────────────────────────────────────────
+const formSirh = document.getElementById('form-sirh');
+if (formSirh) {
+  formSirh.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showMsg('msg-sirh', true, '⏳ Import en cours…');
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    const d = await postForm('/upload-sirh', 'form-sirh');
+    btn.disabled = false;
+    if (d.ok) {
+      showMsg('msg-sirh', true,
+        `✔ ${d.total} offres SIRH importées (${d.with_detail} avec détail).`);
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showMsg('msg-sirh', false, '✘ ' + d.msg);
+    }
+  });
+}
+
+// ── Étape 4 : Rapports ───────────────────────────────────────────────────────
+const btnRep = document.getElementById('btn-gen-reports');
+if (btnRep) {
+  btnRep.addEventListener('click', async () => {
+    btnRep.disabled = true;
+    showMsg('msg-reports', true, '⏳ Génération…');
+    const d = await postJson('/generate-reports');
+    btnRep.disabled = false;
+    if (!d.ok) { showMsg('msg-reports', false, '✘ ' + d.msg); return; }
+    showMsg('msg-reports', true, '✔ Rapports générés.');
+    // Afficher les liens
+    const r = await (await fetch('/list-reports')).json();
+    const div = document.getElementById('reports-list');
+    div.innerHTML = r.files.map(f =>
+      `<a href="/reports/${f}" target="_blank" class="report-link">📄 ${f}</a>`
+    ).join('');
+  });
+}
+</script>
+
+</body>
+</html>
